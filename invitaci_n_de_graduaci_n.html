@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Mi Graduación — Invitación Especial</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=Playfair+Display:ital,wght@0,500;0,700;1,400&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-main: #111113;          /* Negro carbón ahumado suave */
+      --bg-card: #1a1a1e;          /* Tarjetas en tono grafito oscuro */
+      --accent-dark: #f0d5a8;      /* Oro suave para nombres y títulos */
+      --accent-light: #f7e8ce;      
+      --gold: #d4af37;             /* Dorado brillante */
+      --text-dark: #f5f5f7;        /* Texto principal muy claro */
+      --text-dim: #b0b0b8;         /* Texto secundario */
+      --white: #ffffff;
+      
+      --script-font: 'Great Vibes', cursive;
+      --serif-font: 'Cormorant Garamond', serif;
+      --display-font: 'Playfair Display', serif;
+      
+      --maxw: 920px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-dark);
+      font-family: var(--serif-font);
+      overflow-x: hidden;
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+      position: relative;
+    }
+
+    /* CANVAS DE PARTÍCULAS DE LUZ */
+    #particle-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrapper {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: var(--maxw);
+      padding: 25px 12px 80px;
+    }
+
+    /* EFECTO DE APARICIÓN AL DESLIZAR (SCROLL REVEAL) */
+    .reveal {
+      opacity: 0;
+      transform: translateY(35px);
+      transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1), transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .reveal.active {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* PANTALLA SOBRE */
+    #cover {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% 50%, #1e1e24 0%, #0a0a0c 90%);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1), visibility 1.2s;
+    }
+    #cover.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+    
+    .envelope-box {
+      position: relative;
+      width: 360px;
+      height: 240px;
+      perspective: 1200px;
+      cursor: pointer;
+      transition: transform 0.8s ease;
+    }
+    #cover.opening .envelope-box { transform: translateY(60px) scale(0.95); }
+
+    .env-paper {
+      position: absolute;
+      inset: 0;
+      background-color: #25252c;
+      border-radius: 4px;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7);
+    }
+    .env-side-left {
+      position: absolute; inset: 0;
+      clip-path: polygon(0 0, 50% 50%, 0 100%);
+      background: linear-gradient(135deg, #2d2d36 0%, #1c1c22 100%);
+      z-index: 1;
+    }
+    .env-side-right {
+      position: absolute; inset: 0;
+      clip-path: polygon(100% 0, 50% 50%, 100% 100%);
+      background: linear-gradient(-135deg, #2d2d36 0%, #1c1c22 100%);
+      z-index: 1;
+    }
+    .env-bottom {
+      position: absolute; inset: 0;
+      clip-path: polygon(0 100%, 50% 48%, 100% 100%);
+      background: linear-gradient(0deg, #16161a 0%, #2d2d36 100%);
+      z-index: 2;
+    }
+    .env-top-flap {
+      position: absolute; inset: 0;
+      clip-path: polygon(0 0, 100% 0, 50% 52%);
+      background: linear-gradient(180deg, #363642 0%, #25252c 100%);
+      transform-origin: top center;
+      transition: transform 0.9s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 4;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));
+    }
+    #cover.opening .env-top-flap { transform: rotateX(-180deg); z-index: 0; }
+
+    .env-seal-svg {
+      position: absolute; top: 52%; left: 50%;
+      transform: translate(-50%, -50%) scale(1);
+      width: 68px; height: 68px; z-index: 5;
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.6));
+      transition: transform 0.5s ease, opacity 0.5s ease;
+    }
+    #cover.opening .env-seal-svg { transform: translate(-50%, -50%) scale(0.3); opacity: 0; }
+
+    /* 1. NOMBRES DESTACADOS Y MENSAJE */
+    .hero-container {
+      text-align: center;
+      margin-bottom: 45px;
+      padding-top: 15px;
+    }
+    .hero-names h1 {
+      font-family: var(--script-font);
+      font-size: 80px;
+      color: var(--accent-dark);
+      line-height: 1;
+      text-shadow: 2px 2px 15px rgba(240, 213, 168, 0.25);
+      margin-bottom: 10px;
+    }
+    .hero-subtitle {
+      font-family: var(--display-font);
+      font-size: 20px;
+      letter-spacing: 4px;
+      color: var(--gold);
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+    .hero-invitation {
+      margin: 0 auto;
+      max-width: 680px;
+    }
+    .hero-invitation p {
+      font-style: italic;
+      font-size: 22px;
+      line-height: 1.6;
+      color: var(--text-dark);
+    }
+
+    /* 2. UBICACIÓN Y CUENTA REGRESIVA */
+    .countdown-section {
+      background: var(--bg-card);
+      border: 1px solid rgba(212, 175, 55, 0.35);
+      border-radius: 16px;
+      padding: 30px 15px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      margin-bottom: 45px;
+    }
+    .countdown-section h2 {
+      font-family: var(--display-font);
+      color: var(--accent-dark);
+      margin-bottom: 8px;
+      font-size: 24px;
+    }
+    .countdown-section p {
+      font-size: 18px;
+      color: var(--text-dim);
+      margin-bottom: 25px;
+      font-style: italic;
+    }
+    .timer-display {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+    }
+    .timer-box {
+      background: rgba(17, 17, 19, 0.85);
+      border: 1px solid var(--gold);
+      border-radius: 8px;
+      padding: 12px 8px;
+      min-width: 70px;
+      box-shadow: 0 4px 10px rgba(212, 175, 55, 0.12);
+    }
+    .timer-box span {
+      display: block;
+      font-family: var(--display-font);
+      font-size: 30px;
+      color: var(--accent-dark);
+      font-weight: bold;
+      line-height: 1;
+    }
+    .timer-box small {
+      font-size: 12px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* 3. GALERÍA POLAROID */
+    .polaroid-section { margin-bottom: 45px; text-align: center; }
+    .polaroid-gallery {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+      margin-top: 15px;
+    }
+    .polaroid {
+      background: #f7f3e8;
+      padding: 10px 10px 40px 10px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      border: 1px solid #d4af37;
+      width: calc(50% - 10px);
+      max-width: 270px;
+      transition: transform 0.3s ease;
+    }
+    .polaroid:nth-child(odd) { transform: rotate(-3deg); }
+    .polaroid:nth-child(even) { transform: rotate(4deg); }
+    .polaroid:hover { transform: scale(1.04) rotate(0deg); z-index: 10; }
+    .polaroid img {
+      width: 100%;
+      height: 210px;
+      object-fit: cover;
+    }
+
+    /* 4. SECCIÓN INVITADO Y BOTÓN CIRCULAR */
+    .guest-confirm-section {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 25px;
+      background: linear-gradient(135deg, #22222a 0%, #141418 100%);
+      border: 1px solid rgba(212, 175, 55, 0.4);
+      border-radius: 16px;
+      padding: 35px 20px;
+      margin-bottom: 45px;
+      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.5);
+      flex-wrap: wrap;
+    }
+    .guest-info {
+      text-align: left;
+      flex: 1;
+      min-width: 200px;
+    }
+    .guest-info h2 {
+      font-family: var(--script-font);
+      font-size: 42px;
+      color: var(--white);
+      line-height: 1.2;
+      margin-bottom: 5px;
+    }
+    .guest-info .guest-name { color: var(--gold); }
+    .guest-info p {
+      font-family: var(--display-font);
+      font-size: 18px;
+      color: #e0e0e8;
+    }
+    .circle-btn {
+      width: 110px;
+      height: 110px;
+      border-radius: 50%;
+      background: var(--gold);
+      color: #111113;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      text-decoration: none;
+      font-family: var(--display-font);
+      font-weight: bold;
+      font-size: 15px;
+      letter-spacing: 1px;
+      line-height: 1.3;
+      box-shadow: 0 0 0 6px rgba(212, 175, 55, 0.2);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      animation: pulse 2s infinite;
+    }
+    .circle-btn:hover {
+      transform: scale(1.05);
+      background: #f0d5a8;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.5); }
+      70% { box-shadow: 0 0 0 15px rgba(212, 175, 55, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); }
+    }
+
+    /* 5. HISTORIA Y FECHA */
+    .story-section { text-align: center; margin-bottom: 50px; padding: 0 10px; }
+    .story-text { 
+       font-style: italic; 
+       font-size: 20px; 
+       line-height: 1.7; 
+       max-width: 700px; 
+       margin: 0 auto; 
+       color: var(--text-dark);
+    }
+    .date-highlight {
+      font-family: var(--script-font);
+      font-size: 55px;
+      color: var(--accent-dark);
+      margin: 20px 0 5px;
+    }
+
+    /* 6. CARRUSEL DE IMÁGENES */
+    .carousel-section { margin-bottom: 50px; width: 100%; }
+    .carousel-container {
+      position: relative;
+      width: 100%;
+      max-width: 750px;
+      height: 420px;
+      margin: 0 auto;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+    }
+    .carousel-track {
+      display: flex;
+      width: 100%;
+      height: 100%;
+      transition: transform 0.5s ease-in-out;
+    }
+    .carousel-slide { min-width: 100%; height: 100%; }
+    .carousel-slide img { width: 100%; height: 100%; object-fit: cover; }
+    .carousel-btn {
+      position: absolute;
+      top: 50%; transform: translateY(-50%);
+      background: rgba(17, 17, 19, 0.75);
+      border: 1px solid var(--gold);
+      color: var(--accent-dark);
+      width: 42px; height: 42px;
+      border-radius: 50%;
+      cursor: pointer; z-index: 10;
+      font-size: 20px;
+      transition: background 0.3s ease;
+    }
+    .carousel-btn:hover { background: var(--bg-main); }
+    .carousel-btn.prev { left: 12px; }
+    .carousel-btn.next { right: 12px; }
+
+    /* 7. ITINERARIO VERTICAL */
+    .itinerary-section { margin-bottom: 50px; width: 100%; }
+    .itinerary-title {
+      font-family: var(--display-font);
+      letter-spacing: 5px;
+      text-align: center;
+      font-size: 26px;
+      margin-bottom: 45px;
+      color: var(--accent-dark);
+    }
+    .timeline-vertical {
+      position: relative;
+      max-width: 750px;
+      margin: 0 auto;
+      padding-left: 35px;
+      border-left: 2px solid rgba(212, 175, 55, 0.4);
+    }
+    .timeline-item { position: relative; margin-bottom: 40px; padding-left: 25px; }
+    
+    .timeline-node {
+      position: absolute; 
+      left: -53px; 
+      top: -4px;
+      width: 44px; 
+      height: 44px;
+      background: var(--bg-card);
+      border: 2px solid var(--gold);
+      border-radius: 50%;
+      display: flex; 
+      align-items: center; 
+      justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
+    }
+    .timeline-content-card {
+      background: var(--bg-card);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      border-radius: 10px;
+      padding: 18px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+      flex-wrap: wrap;
+    }
+    .timeline-info h4 {
+      font-family: var(--script-font);
+      font-size: 34px;
+      color: var(--accent-dark);
+      line-height: 1.1;
+    }
+    .timeline-info p { font-size: 16px; color: var(--text-dim); margin-top: 4px; }
+    .timeline-time-box { text-align: right; min-width: 110px; }
+    .timeline-time-box .time {
+      font-family: var(--script-font);
+      font-size: 30px;
+      color: var(--gold);
+    }
+    .btn-map {
+      display: inline-block;
+      font-size: 13px;
+      background: var(--gold);
+      color: #111113;
+      padding: 6px 15px;
+      border-radius: 20px;
+      text-decoration: none;
+      margin-top: 8px;
+      font-family: var(--display-font);
+      font-weight: bold;
+      transition: background 0.3s ease;
+    }
+    .btn-map:hover { background: var(--accent-dark); }
+
+    /* AJUSTES RESPONSIVOS */
+    @media (max-width: 650px) {
+      .wrapper { padding: 15px 10px 60px; }
+      .envelope-box { width: 290px; height: 195px; }
+      .hero-names h1 { font-size: 55px; }
+      .hero-subtitle { font-size: 16px; letter-spacing: 2px; }
+      .guest-confirm-section { flex-direction: column; text-align: center; gap: 18px; padding: 30px 15px; }
+      .guest-info { text-align: center; }
+      .polaroid { width: 100%; max-width: 310px; }
+      .carousel-container { height: 280px; }
+      .timeline-vertical { padding-left: 25px; }
+      .timeline-item { padding-left: 15px; }
+      .timeline-node { left: -41px; width: 38px; height: 38px; font-size: 17px; }
+      .timeline-content-card { flex-direction: column; align-items: flex-start; gap: 10px; }
+      .timeline-time-box { text-align: left; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- CANVAS DE PARTÍCULAS DE LUZ -->
+<canvas id="particle-canvas"></canvas>
+
+<!-- SOBRE VECTORIAL -->
+<div id="cover">
+  <div class="envelope-box" onclick="openEnvelope()">
+    <div class="env-paper">
+      <div class="env-side-left"></div>
+      <div class="env-side-right"></div>
+      <div class="env-bottom"></div>
+    </div>
+    <div class="env-top-flap"></div>
+    
+    <!-- Sello con birrete -->
+    <svg class="env-seal-svg" viewBox="0 0 100 100">
+      <defs>
+        <radialGradient id="waxGrad" cx="35%" cy="35%" r="65%">
+          <stop offset="0%" stop-color="#f7e8ce" />
+          <stop offset="50%" stop-color="#d4af37" />
+          <stop offset="100%" stop-color="#8a6f21" />
+        </radialGradient>
+      </defs>
+      <path d="M50,5 C68,3 88,14 93,32 C98,50 91,73 78,87 C65,101 35,97 18,87 C1,77 -3,52 4,33 C11,14 32,7 50,5 Z" fill="url(#waxGrad)" />
+      <circle cx="50" cy="50" r="34" fill="none" stroke="#fff" stroke-width="2" opacity="0.4" />
+      <text x="50" y="60" font-size="34" text-anchor="middle" opacity="0.95">🎓</text>
+    </svg>
+  </div>
+  <p style="margin-top: 30px; font-style: italic; font-size: 16px; color: var(--text-dim);">Toca el sobre para abrir</p>
+</div>
+
+<div class="wrapper">
+  <!-- 1. NOMBRE DEL GRADUANDO Y MENSAJE -->
+  <div class="hero-container reveal">
+    <div class="hero-names">
+      <h1>Carlos Mendoza</h1>
+    </div>
+    <div class="hero-subtitle">Graduación 2026</div>
+    <div class="hero-invitation">
+      <p>Con gran orgullo y alegría, tengo el honor de invitarte a celebrar la culminación de esta importante etapa académica y el inicio de un nuevo camino profesional.</p>
+    </div>
+  </div>
+
+  <!-- 2. UBICACIÓN Y CUENTA REGRESIVA -->
+  <div class="countdown-section reveal">
+    <h2>El Gran Día Se Acerca...</h2>
+    <p>Centro de Convenciones, San Salvador</p>
+    <div class="timer-display" id="countdown">
+      <div class="timer-box"><span id="days">00</span><small>Días</small></div>
+      <div class="timer-box"><span id="hours">00</span><small>Hrs</small></div>
+      <div class="timer-box"><span id="mins">00</span><small>Min</small></div>
+      <div class="timer-box"><span id="secs">00</span><small>Seg</small></div>
+    </div>
+  </div>
+
+  <!-- 3. GALERÍA POLAROID -->
+  <div class="polaroid-section reveal">
+    <div class="polaroid-gallery">
+      <div class="polaroid">
+        <img src="img/2.jpg" alt="Mi Graduación">
+      </div>
+      <div class="polaroid">
+        <img src="img/3.jpg" alt="Celebración">
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. SECCIÓN INVITADO Y BOTÓN DE CONFIRMACIÓN -->
+  <div class="guest-confirm-section reveal">
+    <div class="guest-info">
+      <h2 id="greeting">¡Hola, Invitado!</h2>
+      <p>Pases Reservados: <span id="guest-passes" style="font-weight:bold; color:var(--gold);">1</span></p>
+      <p style="font-size:14px; margin-top:8px; opacity:0.8;">Por favor confirma tu asistencia antes del 1 de Diciembre</p>
+    </div>
+    <a href="#" id="btn-confirm" class="circle-btn">Confirma<br>Aquí</a>
+  </div>
+
+  <!-- 5. REFLEXIÓN Y FECHA -->
+  <div class="story-section reveal">
+    <p class="story-text">
+      "El éxito no es el final, el fracaso no es fatal: es el valor para continuar lo que cuenta." Tras años de esfuerzo, estudio y dedicación, este logro también le pertenece a quienes siempre creyeron en mí.
+    </p>
+    <div class="date-highlight">~ 20 de Diciembre ~</div>
+    <p style="letter-spacing: 3px; font-size: 18px; color: var(--text-dim);">2026</p>
+  </div>
+
+  <!-- 6. CARRUSEL DE FOTOS -->
+  <div class="carousel-section reveal">
+    <div class="carousel-container">
+      <button class="carousel-btn prev" onclick="moveCarousel(-1)">&#10094;</button>
+      <button class="carousel-btn next" onclick="moveCarousel(1)">&#10095;</button>
+      <div class="carousel-track" id="carouselTrack">
+        <div class="carousel-slide"><img src="img/4.jpg"Recuerdo Universitario 1"></div>
+        <div class="carousel-slide"><img src="img/1.jpg" alt="Recuerdo Universitario 2"></div>
+        <div class="carousel-slide"><img src="img/5.jpg" alt="Recuerdo Universitario 3"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. ITINERARIO -->
+  <div class="itinerary-section reveal">
+    <div class="itinerary-title">ITINERARIO DEL EVENTO</div>
+    <div class="timeline-vertical">
+      
+      <div class="timeline-item">
+        <div class="timeline-node">🎓</div>
+        <div class="timeline-content-card">
+          <div class="timeline-info">
+            <h4>Ceremonia Académica</h4>
+            <p>Auditorio Principal, Universidad</p>
+          </div>
+          <div class="timeline-time-box">
+            <div class="time">3:30 PM</div>
+            <a href="https://maps.google.com" target="_blank" class="btn-map">Cómo llegar</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="timeline-item">
+        <div class="timeline-node">🥂</div>
+        <div class="timeline-content-card">
+          <div class="timeline-info">
+            <h4>Recepción & Cóctel</h4>
+            <p>Jardín Central de Eventos</p>
+          </div>
+          <div class="timeline-time-box">
+            <div class="time">5:30 PM</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="timeline-item">
+        <div class="timeline-node">🎉</div>
+        <div class="timeline-content-card">
+          <div class="timeline-info">
+            <h4>Cena, Brindis & Fiesta</h4>
+            <p>Salón Imperial</p>
+          </div>
+          <div class="timeline-time-box">
+            <div class="time">6:30 PM</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  // ----------------------------------------------------
+  // SCRIPT DE PARTÍCULAS DE LUZ
+  // ----------------------------------------------------
+  const canvas = document.getElementById('particle-canvas');
+  const ctx = canvas.getContext('2d');
+
+  let particlesArray = [];
+  const numberOfParticles = 50;
+
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  class Particle {
+    constructor() {
+      this.x = Math.random() * canvas.width;
+      this.y = Math.random() * canvas.height;
+      this.size = Math.random() * 2.5 + 0.8;
+      this.speedX = (Math.random() - 0.5) * 0.4;
+      this.speedY = (Math.random() - 0.5) * 0.4 - 0.2;
+      this.color = Math.random() > 0.4 ? 'rgba(212, 175, 55, ' : 'rgba(247, 232, 206, ';
+      this.alpha = Math.random() * 0.6 + 0.2;
+      this.pulseSpeed = Math.random() * 0.02 + 0.005;
+    }
+    update() {
+      this.x += this.speedX;
+      this.y += this.speedY;
+
+      this.alpha += Math.sin(Date.now() * this.pulseSpeed) * 0.01;
+      if (this.alpha > 0.85) this.alpha = 0.85;
+      if (this.alpha < 0.1) this.alpha = 0.1;
+
+      if (this.x < 0) this.x = canvas.width;
+      if (this.x > canvas.width) this.x = 0;
+      if (this.y < 0) this.y = canvas.height;
+      if (this.y > canvas.height) this.y = 0;
+    }
+    draw() {
+      ctx.fillStyle = this.color + this.alpha + ')';
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = '#d4af37';
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+  }
+
+  function initParticles() {
+    particlesArray = [];
+    for (let i = 0; i < numberOfParticles; i++) {
+      particlesArray.push(new Particle());
+    }
+  }
+
+  function animateParticles() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < particlesArray.length; i++) {
+      particlesArray[i].update();
+      particlesArray[i].draw();
+    }
+    requestAnimationFrame(animateParticles);
+  }
+
+  initParticles();
+  animateParticles();
+
+  // ----------------------------------------------------
+  // SCRIPT DE APARICIÓN AL DESLIZAR (SCROLL REVEAL)
+  // ----------------------------------------------------
+  document.addEventListener("DOMContentLoaded", () => {
+    const observerOptions = {
+      root: null,
+      rootMargin: '0px',
+      threshold: 0.15
+    };
+
+    const observer = new IntersectionObserver((entries, observer) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('active');
+        }
+      });
+    }, observerOptions);
+
+    document.querySelectorAll('.reveal').forEach(el => {
+      observer.observe(el);
+    });
+
+    // ----------------------------------------------------
+    // SCRIPT PARA WHATSAPP (INVITADO)
+    // ----------------------------------------------------
+    const hostPhoneNumber = "50377665881"; 
+    const params = new URLSearchParams(window.location.search);
+    const nameParam = params.get('nombre');
+    const passesParam = params.get('pases');
+
+    const guestName = nameParam ? nameParam.trim() : "Estimado/a invitado/a";
+    const guestPasses = passesParam ? passesParam.trim() : "1";
+
+    document.getElementById('greeting').innerHTML = `¡Hola, <span class="guest-name">${guestName}</span>!`;
+    document.getElementById('guest-passes').textContent = guestPasses;
+
+    const message = `¡Hola! Confirmo mi asistencia a tu graduación. ¡Muchas felicidades por este gran logro!`;
+    const whatsappUrl = `https://wa.me/${hostPhoneNumber}?text=${encodeURIComponent(message)}`;
+    
+    document.getElementById('btn-confirm').setAttribute('href', whatsappUrl);
+  });
+
+  // ----------------------------------------------------
+  // APERTURA DE SOBRE
+  // ----------------------------------------------------
+  function openEnvelope() {
+    const cover = document.getElementById('cover');
+    if(cover.classList.contains('opening')) return;
+    cover.classList.add('opening');
+    setTimeout(() => { cover.classList.add('hidden'); }, 1000);
+  }
+
+  // ----------------------------------------------------
+  // CUENTA REGRESIVA
+  // ----------------------------------------------------
+  const eventDate = new Date("Dec 20, 2026 15:30:00").getTime();
+  
+  const timer = setInterval(() => {
+    const now = new Date().getTime();
+    const distance = eventDate - now;
+
+    if (distance < 0) {
+      clearInterval(timer);
+      document.getElementById("countdown").innerHTML = "<div style='font-family: var(--display-font); font-size:24px; color:var(--accent-dark);'>¡Llegó el gran día!</div>";
+      return;
+    }
+
+    document.getElementById('days').innerText = Math.floor(distance / (1000 * 60 * 60 * 24)).toString().padStart(2, '0');
+    document.getElementById('hours').innerText = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)).toString().padStart(2, '0');
+    document.getElementById('mins').innerText = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
+    document.getElementById('secs').innerText = Math.floor((distance % (1000 * 60)) / 1000).toString().padStart(2, '0');
+  }, 1000);
+
+  // ----------------------------------------------------
+  // CARRUSEL DE FOTOS
+  // ----------------------------------------------------
+  let currentSlide = 0;
+  const track = document.getElementById('carouselTrack');
+  const slides = track.children.length;
+
+  function moveCarousel(direction) {
+    currentSlide = (currentSlide + direction + slides) % slides;
+    track.style.transform = `translateX(-${currentSlide * 100}%)`;
+  }
+  
+  setInterval(() => { moveCarousel(1); }, 4000);
+</script>
+</body>
+</html>
